@@ -1,0 +1,63 @@
+{
+  "configurations": [
+    {
+      "name": "STM32H747 CM7",
+      "compileCommands": "${workspaceFolder}/.vscode/compile_commands.json",
+      "compilerPath": "C:/Users/tbbbs/AppData/Roaming/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/15.2.1-1.1.1/.content/bin/arm-none-eabi-gcc.exe",
+      "compilerArgs": [
+        "-mcpu=cortex-m7",
+        "-mthumb",
+        "-mfpu=fpv5-d16",
+        "-mfloat-abi=hard"
+      ],
+      "cStandard": "c11",
+      "intelliSenseMode": "windows-gcc-arm",
+      "includePath": [
+        "${workspaceFolder}/CM7/Core/Inc",
+        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+        "${workspaceFolder}/Drivers/CMSIS/Include",
+        "${workspaceFolder}/BSP/SDRAM",
+        "${workspaceFolder}/BSP/MPU",
+        "${workspaceFolder}/CM4/Core/Inc"
+      ],
+      "defines": [
+        "CORE_CM7",
+        "USE_HAL_DRIVER",
+        "STM32H747xx",
+        "USE_PWR_LDO_SUPPLY"
+      ]
+    },
+    {
+      "name": "STM32H747 CM4",
+      "compileCommands": "${workspaceFolder}/.vscode/compile_commands.json",
+      "compilerPath": "C:/Users/tbbbs/AppData/Roaming/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/15.2.1-1.1.1/.content/bin/arm-none-eabi-gcc.exe",
+      "compilerArgs": [
+        "-mcpu=cortex-m4",
+        "-mthumb",
+        "-mfpu=fpv4-sp-d16",
+        "-mfloat-abi=hard"
+      ],
+      "cStandard": "c11",
+      "intelliSenseMode": "windows-gcc-arm",
+      "includePath": [
+        "${workspaceFolder}/CM4/Core/Inc",
+        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+        "${workspaceFolder}/Drivers/CMSIS/Include",
+        "${workspaceFolder}/BSP/SDRAM",
+        "${workspaceFolder}/BSP/MPU",
+        "${workspaceFolder}/CM7/Core/Inc"
+      ],
+      "defines": [
+        "CORE_CM4",
+        "USE_HAL_DRIVER",
+        "STM32H747xx",
+        "USE_PWR_LDO_SUPPLY"
+      ]
+    }
+  ],
+  "version": 4
+}

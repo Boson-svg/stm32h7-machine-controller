@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"exit=$?\")",
+      "Bash(arm-none-eabi-gcc --version)",
+      "Bash(arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard -DCORE_CM7 -DUSE_HAL_DRIVER -DSTM32H747xx -DUSE_PWR_LDO_SUPPLY -I../../CM7/Core/Inc -I../../Drivers/STM32H7xx_HAL_Driver/Inc -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I../../Drivers/CMSIS/Include -I../../BSP/SDRAM -I../../BSP/MPU -o /tmp/retarget_test.o ../../CM7/Core/Src/retarget.c)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\('.vscode/c_cpp_properties.json',encoding='utf-8'\\)\\); [print\\(c['name'], '|', c['compilerPath'], '| paths:', len\\(c['includePath']\\)\\) for c in d['configurations']]\")",
+      "Bash(node -e \"const d=require\\('./.vscode/c_cpp_properties.json'\\); d.configurations.forEach\\(c=>console.log\\(c.name,'|',c.compilerPath,'| paths:',c.includePath.length\\)\\)\")"
+    ]
+  }
+}

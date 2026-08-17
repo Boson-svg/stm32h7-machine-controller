@@ -1,0 +1,71 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "STM32H747 CM7 调试",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/Makefile/CM7/build/Template_CM7.elf",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "jlink",
+      "serverpath": "D:/JLink_V962/JLinkGDBServerCL.exe",
+      "toolchainBinDir": "C:/Users/tbbbs/AppData/Roaming/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/15.2.1-1.1.1/.content/bin",
+      "device": "STM32H747XI_M7",
+      "interface": "swd",
+      "serverArgs": ["-speed", "4000"],
+      "runToEntryPoint": "main",
+      "preLaunchTask": "build CM7",
+      "showDevDebugOutput": "raw"
+    },
+    {
+      "name": "STM32H747 CM7 只烧录",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/Makefile/CM7/build/Template_CM7.elf",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "jlink",
+      "serverpath": "D:/JLink_V962/JLinkGDBServerCL.exe",
+      "toolchainBinDir": "C:/Users/tbbbs/AppData/Roaming/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/15.2.1-1.1.1/.content/bin",
+      "device": "STM32H747XI_M7",
+      "interface": "swd",
+      "serverArgs": ["-speed", "4000"],
+      "runToEntryPoint": "main",
+      "preLaunchTask": "build CM7",
+      "showDevDebugOutput": "raw",
+      "postLaunchCommands": ["monitor reset run", "disconnect"]
+    },
+    {
+      "name": "STM32H747 CM4 调试",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/Makefile/CM4/build/Template_CM4.elf",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "jlink",
+      "serverpath": "D:/JLink_V962/JLinkGDBServerCL.exe",
+      "toolchainBinDir": "C:/Users/tbbbs/AppData/Roaming/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/15.2.1-1.1.1/.content/bin",
+      "device": "STM32H747XI_M4",
+      "interface": "swd",
+      "serverArgs": ["-speed", "4000"],
+      "runToEntryPoint": "main",
+      "preLaunchTask": "build CM4",
+      "showDevDebugOutput": "raw"
+    },
+    {
+      "name": "STM32H747 CM4 只烧录",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/Makefile/CM4/build/Template_CM4.elf",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "jlink",
+      "serverpath": "D:/JLink_V962/JLinkGDBServerCL.exe",
+      "toolchainBinDir": "C:/Users/tbbbs/AppData/Roaming/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/15.2.1-1.1.1/.content/bin",
+      "device": "STM32H747XI_M4",
+      "interface": "swd",
+      "serverArgs": ["-speed", "4000"],
+      "runToEntryPoint": "main",
+      "preLaunchTask": "build CM4",
+      "showDevDebugOutput": "raw",
+      "postLaunchCommands": ["monitor reset run", "disconnect"]
+    }
+  ]
+}
