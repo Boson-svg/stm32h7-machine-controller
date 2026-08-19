@@ -329,7 +329,7 @@ LCD_BL(1);      // 背光开
 
 1. 搬正式 LCD 驱动（`ltdc_fill` / `ltdc_clear`，DMA2D 硬件填充），替换手写 for 循环清屏；
 2. 搬 `ltdc_gpio_init()`（背光/复位/供电正式封装）；
-3. 配触摸（软件 I2C + FT5206），串口打印坐标；
+3. 配触摸（软件 I2C + FT5446U/FT5x06 兼容驱动），串口打印坐标；
 4. 之后进入 FreeRTOS + Modbus。
 
 ---

@@ -1,7 +1,7 @@
 # 项目总体规划与协作约定（每天更新）
 
 > 本文档是新 AI 对话窗口的「启动上下文」——接手本项目前先读这里。
-> 最后更新：2026-08-17
+> 最后更新：2026-08-19
 
 ---
 
@@ -61,7 +61,7 @@ CM4 侧只有：`dma.c / main.c`（轻量实时任务）。
 
 | 周 | 目标 | 关键产出物 | 验收标准 |
 |---|---|---|---|
-| **W1** | 双核 + 显示 | 双核启动、FMC/SDRAM、LTDC+LVGL | 双核各自点灯、屏幕点亮 |
+| **W1** | 双核 + 显示基础链路 | 双核启动、FMC/SDRAM、LTDC、DMA2D、触摸 | 双核各自点灯、屏幕显示纯色、串口输出触摸坐标 |
 | **W2** | RTOS + 存储 + Modbus | FreeRTOS 多任务、日志、SDMMC+FATFS、Modbus RTU 从站 | Modbus Poll 读写线圈 |
 | **W3** | 以太网 + OTA（最难） | W5500 TCP、双槽分区、bootloader、SOIP、CRC32、回滚 | 上位机一键升级、断电可回滚 |
 | **W4** | 稳定 + 增量 + 包装 | IWDG、复位原因、增量功能、架构图+文档 | 长跑不重启、能脱稿讲透 |
@@ -127,8 +127,8 @@ E:\STM32H7\stm32h7-machine-controller\
 |---|---|---|
 | `BSP/SDRAM/` | `BSP/SDRAM/` | ✅ 已搬 |
 | `BSP/MPU/` | `BSP/MPU/` | ✅ 已搬 |
-| `BSP/LCD/` | `BSP/LCD/` | ⏳ 待搬（下一步）|
-| `BSP/TOUCH/` | `BSP/TOUCH/` | ⏳ 待搬 |
+| `BSP/LCD/` | `BSP/LCD/` | ✅ 已手写并接入（DMA2D 清屏）|
+| `BSP/TOUCH/` | `BSP/TOUCH/` | ✅ 已手写并接入（软件 I2C + FT5446U/FT5x06 兼容驱动）|
 | 其余 BSP | 对应 BSP/ | 未搬 |
 | `CM7/Core/Src/fmc.c` | `CM7/Core/Src/fmc.c` | ✅ CubeMX 已生成 |
 | `CM7/Core/Src/ltdc.c` | `CM7/Core/Src/ltdc.c` | ✅ CubeMX 已生成 |
@@ -170,14 +170,54 @@ E:\STM32H7\stm32h7-machine-controller\
 | SDRAM 32MB 读写验证 | ✅ | 08-16 |
 | USART1 + printf 重定向 | ✅ | 08-17 |
 | LTDC 点屏（显示纯红） | ✅ | 08-17 |
+| DMA2D 硬件清屏（ltdc_clear） | ✅ | 08-18 |
+| 正式 LCD 驱动（ltdc_fill/gpio/param） | ✅ | 08-18 |
+| 软件 I2C（ctiic，7 个时序函数） | ✅ | 08-18 |
+| FT5446U 触摸（FT5x06 兼容驱动） | ✅ | 08-19 |
 
-**进行中 / 下一步**
+**W1「双核 + 显示 + 触摸」全部完成 ✅**
 
-1. 搬正式 LCD 驱动（`ltdc_fill`/`ltdc_clear` 用 DMA2D 硬件填充，替换手写 for 循环）；
-2. 搬 `ltdc_gpio_init()`（背光/复位/供电正式封装）；
-3. 配触摸（软件 I2C + FT5206），串口打印坐标。
+> 说明：这里的“显示”指 SDRAM + LTDC + DMA2D 基础链路，LVGL 图形界面尚未移植；LVGL 是否纳入后续版本，按一个月总进度决定。
 
-**详细日志**：见 [logs/01_display_bringup_log.md](logs/01_display_bringup_log.md)
+### 5.1 Day 02 验收证据
+
+| 验收项 | 当前事实 | 证据 |
+|---|---|---|
+| DMA2D 配置 | CM7 使用 DMA2D，RGB565、Memory-to-Memory、无 Alpha 修改、输出偏移 0 | `Template.ioc`、`CM7/Core/Src/dma2d.c` |
+| LCD 驱动 | 已加入 `ltdc_param_init`、`ltdc_fill`、`ltdc_clear`、`ltdc_gpio_init` | `BSP/LCD/lcd_ltdc.c/.h` |
+| 软件 I2C | SCL=PB10，SDA=PB11，已实现起始、停止、ACK、收发字节等时序 | `BSP/TOUCH/ctiic.c/.h` |
+| FT5446U 初始化 | 使用 FT5x06 兼容寄存器驱动，串口打印 `touch init OK` | 开发板串口日志 |
+| 触摸坐标 | 示例坐标 `x=425 y=510`、`x=8 y=500`、`x=650 y=314`，均在 X=0~1023、Y=0~599 范围内 | 开发板串口日志 |
+| 触摸状态 | 按下、移动、抬起能够区分；释放后不会持续输出旧坐标 | 调试解析结果、开发板串口日志 |
+| 触摸设备信息 | `vendor_id=0x54`、`firmware_id=0x05` | 开发板串口日志 |
+| I2C 通信 | 软件 I2C 能够正常读取设备信息和触摸坐标 | 开发板运行结果 |
+| 工程接入 | CM7 Makefile 已加入 LCD、TOUCH、DMA2D 源文件及头文件目录 | `Makefile/CM7/Makefile` |
+| 双核完整构建 | CM7、CM4 均完成编译、链接，并生成 ELF/HEX/BIN；随后增量构建均返回 `exit=0` | `mingw32-make all` 输出、`Makefile/*/build/` |
+
+### 5.2 Day 03 开始前的代码复查项
+
+1. [已完成] 复查 `ft5206_scan` 的坐标解析、按下/移动/释放状态；硬件验证确认三种状态能够区分，释放后不会持续输出旧坐标。
+2. 给 `ft5206_rd_reg` 增加 ACK/总线错误传播，避免读操作失败时继续解析无效数据。
+3. 给 `ltdc_fill` 增加坐标边界和 `sx <= ex、sy <= ey` 检查，并明确 DMA2D 超时后的错误处理。
+4. [已确认] 在进入 FreeRTOS 前保留当前裸机版本作为稳定基线；软件 I2C 的微秒延时仍使用忙等待，不直接改成 `osDelay`。
+5. 当前 Windows 构建环境使用 `mingw32-make`；Makefile 自带的 `clean` 依赖 `rm -fR`，强制构建时的 `mkdir build` 也存在兼容性问题，后续可单独整理构建脚本。
+
+### 5.3 Day 02 阶段结论
+
+Day 02 已完成“显示工程化 + 触摸可交互”的裸机基线：DMA2D 能够清屏，LCD 驱动能够管理帧缓冲和屏幕控制引脚，软件 I2C 能够读取 FT5446U，FT5x06 兼容驱动能够输出有效坐标并区分按下、移动、抬起。当前验证覆盖单点坐标和基础触摸状态，尚未覆盖 FT5446U 全部多点能力、INT 中断模式和完整 I2C 错误恢复。
+
+因此后续移植 FreeRTOS 时，先保留当前轮询式触摸实现作为已验证基线；触摸 INT/EXTI 和驱动错误传播安排在基础任务调度验证之后，避免同时引入多个变量。
+
+**Day 03 / 下一步（W2：RTOS + Modbus）**
+
+1. 仅在 CM7 上通过 CubeMX 配置 FreeRTOS，先创建 LED 任务验证调度器和 HAL 时基；
+2. 在 FreeRTOS 初始版本中保持触摸轮询，不先切换到 INT/EXTI；
+3. Modbus RTU 从站（判帧、CRC16、线圈映射）；
+4. Modbus Poll 验证读写线圈。
+
+**详细日志**：
+- [logs/01_display_bringup_log.md](logs/01_display_bringup_log.md) — Day 01 显示链路
+- [logs/02_display_touch_bringup_log.md](logs/02_display_touch_bringup_log.md) — Day 02 显示工程化、触摸接线与触摸验证
 
 ---
 
@@ -252,11 +292,13 @@ E:\STM32H7\stm32h7-machine-controller\
 Docs/
 ├── 00_project_plan_and_meta.md      # 元文档：总体规划 + 进度 + 约定（每天更新，放根目录）
 ├── logs/                            # 开发日志（按阶段）
-│   └── 01_display_bringup_log.md
+│   ├── 01_display_bringup_log.md
+│   └── 02_display_touch_bringup_log.md
 ├── references/                      # 参考资料（原理图、手册、datasheet）
 │   └── STM32H747XIH6 CB V1.1_SCH.pdf
 └── guides/                          # 排错/工具指南
-    └── STM32_IntelliSense_Troubleshooting.md
+    ├── STM32_IntelliSense_Troubleshooting.md
+    └── commands_cheatsheet.txt
 ```
 
 - `00_project_plan_and_meta.md`（本文档）：总体规划 + 进度 + 约定，**每天完成后更新**；
