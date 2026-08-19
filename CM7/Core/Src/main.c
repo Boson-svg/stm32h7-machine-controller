@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma2d.h"
 #include "ltdc.h"
 #include "usart.h"
 #include "gpio.h"
@@ -25,8 +26,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "sdram.h"
 #include "mpu.h"
+#include "lcd_ltdc.h"
+#include "bsp_delay.h"
+#include "ft5206.h"
+#include "touch.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,17 +77,7 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* 临时清屏测试：往帧缓冲(0xD0000000)写颜色，验证 LTDC + SDRAM 打通 */
-/* color 为 RGB565 格式，红色=0xF800 */
-static void lcd_clear_test(uint16_t color)
-{
-    volatile uint16_t *fb = (volatile uint16_t *)0xD0000000U;
-    uint32_t i;
-    for (i = 0; i < (uint32_t)1024U * 600U; i++)
-    {
-        fb[i] = color;
-    }
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -156,6 +152,7 @@ Error_Handler();
   MX_FMC_Init();
   MX_USART1_UART_Init();
   MX_LTDC_Init();
+  MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
   __HAL_LTDC_LAYER_DISABLE(&hltdc, 1);   // 禁用误启用的 Layer 1
   /* 先配 MPU 放开 SDRAM 区域(0xD0000000)访问权限，再初始化 SDRAM 并自检 */
@@ -163,34 +160,23 @@ Error_Handler();
   sdram_init();
   sdram_test();
 
-  /* 配屏幕三个控制引脚：PB0=背光, PH5=复位, PI11=屏供电(普通GPIO,CubeMX未自动配) */
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOI_CLK_ENABLE();
+  ltdc_gpio_init();   // 背光/复位/供电（你新封装）
+  ltdc_param_init();  // 屏幕参数 + 帧缓冲指针
+  ltdc_clear(LIGHTBLUE); // DMA2D 清屏
+  tp_dev.touchtype = 0x01;
+  if (ft5206_init() == 0)
+    printf("touch init OK\r\n");
+  else
+    printf("touch init FAIL\r\n");
 
-  GPIO_InitTypeDef lcd_gpio = {0};
-  lcd_gpio.Mode  = GPIO_MODE_OUTPUT_PP;
-  lcd_gpio.Pull  = GPIO_PULLUP;
-  lcd_gpio.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  uint8_t vendor_id = 0;
+  uint8_t firmware_id = 0;
 
-  lcd_gpio.Pin = GPIO_PIN_0;            /* PB0 背光 */
-  HAL_GPIO_Init(GPIOB, &lcd_gpio);
-  lcd_gpio.Pin = GPIO_PIN_5;            /* PH5 复位 */
-  HAL_GPIO_Init(GPIOH, &lcd_gpio);
-  lcd_gpio.Pin = GPIO_PIN_11;           /* PI11 屏供电 */
-  HAL_GPIO_Init(GPIOI, &lcd_gpio);
+  ft5206_rd_reg(0xA3, &vendor_id, 1);
+  ft5206_rd_reg(0xA6, &firmware_id, 1);
 
-  /* 上电时序：供电开 -> 复位拉低再释放 -> 背光开 */
-  HAL_GPIO_WritePin(GPIOI, GPIO_PIN_11, GPIO_PIN_SET);   /* 屏供电 ON */
-  HAL_Delay(10);
-  HAL_GPIO_WritePin(GPIOH, GPIO_PIN_5,  GPIO_PIN_RESET); /* 复位拉低 */
-  HAL_Delay(50);
-  HAL_GPIO_WritePin(GPIOH, GPIO_PIN_5,  GPIO_PIN_SET);   /* 复位释放 */
-  HAL_Delay(200);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0,  GPIO_PIN_SET);   /* 背光 ON */
-
-  /* 清屏成红色，验证显示链路 */
-  lcd_clear_test(0xF800);   /* RGB565 红色 */
+  printf("vendor_id=0x%02X, firmware_id=0x%02X\r\n",
+         vendor_id, firmware_id);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -200,8 +186,11 @@ Error_Handler();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);   /* CM7 内核 LED：PA3 翻转，500ms */
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3); /* CM7 内核 LED：PA3 翻转，500ms */
     HAL_Delay(500);
+    if (ft5206_scan(0))
+      printf("touch: x=%d y=%d\r\n", tp_dev.x[0], tp_dev.y[0]);
+    HAL_Delay(50);
   }
   /* USER CODE END 3 */
 }
