@@ -49,3 +49,6 @@ JLinkLog.txt
 
 # Temp files
 *.txt
+
+# Claude Code local settings (machine-specific, don't commit)
+.claude/settings.local.json

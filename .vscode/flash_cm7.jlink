@@ -1,0 +1,5 @@
+halt
+loadfile E:/STM32H7/Template/Makefile/CM7/build/Template_CM7.hex
+r
+g
+exit

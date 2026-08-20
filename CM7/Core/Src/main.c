@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
 #include "dma2d.h"
 #include "ltdc.h"
 #include "usart.h"
@@ -71,6 +73,7 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -179,6 +182,15 @@ Error_Handler();
          vendor_id, firmware_id);
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -186,11 +198,6 @@ Error_Handler();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3); /* CM7 内核 LED：PA3 翻转，500ms */
-    HAL_Delay(500);
-    if (ft5206_scan(0))
-      printf("touch: x=%d y=%d\r\n", tp_dev.x[0], tp_dev.y[0]);
-    HAL_Delay(50);
   }
   /* USER CODE END 3 */
 }

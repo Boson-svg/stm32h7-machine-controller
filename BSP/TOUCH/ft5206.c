@@ -393,23 +393,23 @@ uint8_t ft5206_scan(uint8_t mode)
         ft5206_rd_reg(FT5206_REG_NUM_FINGER, &sta, 1);
 
         //调试触摸状态
-        static uint8_t last_count = 0;
-        uint8_t current_count = (uint8_t)(sta & 0x0FU);
+        // static uint8_t last_count = 0;
+        // uint8_t current_count = (uint8_t)(sta & 0x0FU);
 
-        if ((last_count == 0U) && (current_count > 0U))
-        {
-            printf("touch state: DOWN\r\n");
-        }
-        else if ((last_count > 0U) && (current_count == 0U))
-        {
-            printf("touch state: UP\r\n");
-        }
-        else if (current_count > 0U)
-        {
-            printf("touch state: MOVE\r\n");
-        }
+        // if ((last_count == 0U) && (current_count > 0U))
+        // {
+        //     printf("touch state: DOWN\r\n");
+        // }
+        // else if ((last_count > 0U) && (current_count == 0U))
+        // {
+        //     printf("touch state: UP\r\n");
+        // }
+        // else if (current_count > 0U)
+        // {
+        //     printf("touch state: MOVE\r\n");
+        // }
 
-        last_count = current_count;
+        // last_count = current_count;
 
         /*
          * 判断触摸点数量是否有效

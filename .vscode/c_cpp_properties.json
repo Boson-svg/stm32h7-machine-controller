@@ -20,7 +20,13 @@
         "${workspaceFolder}/Drivers/CMSIS/Include",
         "${workspaceFolder}/BSP/SDRAM",
         "${workspaceFolder}/BSP/MPU",
-        "${workspaceFolder}/CM4/Core/Inc"
+        "${workspaceFolder}/BSP/LCD",
+        "${workspaceFolder}/BSP/TOUCH",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+        "${workspaceFolder}/Drivers/CMSIS/RTOS2/Include",
+        "${workspaceFolder}/CM7/Core/App/Inc"
       ],
       "defines": [
         "CORE_CM7",
@@ -49,7 +55,7 @@
         "${workspaceFolder}/Drivers/CMSIS/Include",
         "${workspaceFolder}/BSP/SDRAM",
         "${workspaceFolder}/BSP/MPU",
-        "${workspaceFolder}/CM7/Core/Inc"
+        "${workspaceFolder}/BSP/LCD"
       ],
       "defines": [
         "CORE_CM4",

@@ -1,7 +1,7 @@
 # 项目总体规划与协作约定（每天更新）
 
 > 本文档是新 AI 对话窗口的「启动上下文」——接手本项目前先读这里。
-> 最后更新：2026-08-19
+> 最后更新：2026-08-21
 
 ---
 
@@ -174,6 +174,13 @@ E:\STM32H7\stm32h7-machine-controller\
 | 正式 LCD 驱动（ltdc_fill/gpio/param） | ✅ | 08-18 |
 | 软件 I2C（ctiic，7 个时序函数） | ✅ | 08-18 |
 | FT5446U 触摸（FT5x06 兼容驱动） | ✅ | 08-19 |
+| CM7 FreeRTOS 内核与任务调度 | ✅ | 08-20 |
+| 原生 LED_Task 周期任务 | ✅ | 08-20 |
+| 原生 TouchTask 轮询任务 | ✅ | 08-20 |
+| TouchEventQueue 队列通信 | ✅ | 08-21 |
+| TouchMonitor_Task 业务任务 | ✅ | 08-21 |
+| 触摸事件驱动 LED 业务 | ✅ | 08-21 |
+| CM4/CM7 重新编译链接验证 | ✅ | 08-21 |
 
 **W1「双核 + 显示 + 触摸」全部完成 ✅**
 
@@ -208,16 +215,58 @@ Day 02 已完成“显示工程化 + 触摸可交互”的裸机基线：DMA2D �
 
 因此后续移植 FreeRTOS 时，先保留当前轮询式触摸实现作为已验证基线；触摸 INT/EXTI 和驱动错误传播安排在基础任务调度验证之后，避免同时引入多个变量。
 
-**Day 03 / 下一步（W2：RTOS + Modbus）**
+### 5.4 Day 03 验收证据
 
-1. 仅在 CM7 上通过 CubeMX 配置 FreeRTOS，先创建 LED 任务验证调度器和 HAL 时基；
-2. 在 FreeRTOS 初始版本中保持触摸轮询，不先切换到 INT/EXTI；
-3. Modbus RTU 从站（判帧、CRC16、线圈映射）；
-4. Modbus Poll 验证读写线圈。
+| 验收项 | 当前事实 | 证据 |
+|---|---|---|
+| FreeRTOS 核心 | CM7 使用 CubeMX 生成的 FreeRTOS 内核、CMSIS-RTOS V2 适配层和 GCC 端口 | `CM7/Core/Inc/FreeRTOSConfig.h`、`Middlewares/Third_Party/FreeRTOS/` |
+| FreeRTOS 时基 | `configTICK_RATE_HZ=1000` | `CM7/Core/Inc/FreeRTOSConfig.h` |
+| 任务创建方式 | 应用任务使用原生 `xTaskCreate()`，内核启动仍使用 `osKernelInitialize()` / `osKernelStart()` | `CM7/Core/App/Src/app_tasks.c`、`CM7/Core/Src/main.c` |
+| CubeMX 安全接入 | `AppTasks_Init()` 位于 `freertos.c` 的 `USER CODE BEGIN RTOS_THREADS` 区域 | `CM7/Core/Src/freertos.c` |
+| LED_Task | 500 ms 周期翻转 PA3，使用 `vTaskDelayUntil()` | `CM7/Core/App/Src/app_tasks.c`，开发板运行正常 |
+| TouchTask | 1 ms 周期调用 `ft5206_scan(0U)`，读取 `tp_dev` 坐标 | `CM7/Core/App/Src/app_tasks.c`，开发板运行正常 |
+| 触摸基础功能 | 按下、移动、抬起仍能识别，坐标仍能输出 | 开发板运行验证 |
+| 任务并行性 | LED_Task 和 TouchTask 能够同时运行 | 开发板运行验证 |
+
+### 5.5 Day 03 阶段结论
+
+Day 03 完成了 CM7 从裸机轮询到 FreeRTOS 多任务的第一步。CubeMX 负责生成内核、端口和基础启动代码，`CM7/Core/App/` 负责保存自己设计的应用任务；`LED_Task` 验证了抢占式调度和周期延时，`TouchTask` 验证了已有 FT5446U 兼容触摸驱动在 RTOS 环境中的可复用性。
+
+当前任务之间还没有使用队列，TouchTask 直接更新和读取全局 `tp_dev`，触摸 INT 也还没有接入 EXTI。下一步应从队列通信开始，把触摸采集和显示响应解耦。
+
+### 5.6 Day 04 验收证据
+
+| 验收项 | 当前事实 | 证据 |
+|---|---|---|
+| 事件结构体 | `TouchEvent_t` 包含事件类型、坐标和 Tick 时间戳 | `CM7/Core/App/Inc/app_tasks.h` |
+| 队列句柄 | 使用 `static QueueHandle_t touch_event_queue_handle = NULL` | `CM7/Core/App/Src/app_tasks.c` |
+| 队列容量 | 队列长度 16，单项大小为 `sizeof(TouchEvent_t)` | `CM7/Core/App/Src/app_tasks.c` |
+| 触摸事件发送 | `TouchTask` 使用 `xQueueSend()` 发送 DOWN/MOVE/UP 事件 | `CM7/Core/App/Src/app_tasks.c` |
+| 触摸事件接收 | `TouchMonitor_Task` 使用 `xQueueReceive(..., portMAX_DELAY)` 阻塞接收 | `CM7/Core/App/Src/app_tasks.c` |
+| LED 业务 | DOWN/MOVE 拉低 LED，UP 拉高 LED | 开发板运行验证 |
+| 串口业务日志 | 能输出事件类型、坐标和 Tick 时间 | 开发板串口日志 |
+| CM4 构建 | 重新编译、链接、生成 ELF/HEX/BIN，返回 `exit=0` | `mingw32-make -W Makefile BUILD_DIR=.../CM4 all` |
+| CM7 构建 | 包含 FreeRTOS、`app_tasks.c`，重新编译、链接、生成 ELF/HEX/BIN，返回 `exit=0` | `mingw32-make -W Makefile BUILD_DIR=.../CM7 all` |
+
+### 5.7 Day 04 阶段结论
+
+Day 04 完成了从触摸采集任务到 LED 业务任务的队列通信闭环。`TouchTask` 只负责采集和封装事件，`TouchMonitor_Task` 只负责接收和处理事件，任务之间通过 `TouchEvent_t` 解耦。该结构可以继续扩展为屏幕按钮、LVGL 控件、Modbus 线圈和设备状态机的统一事件入口。
+
+当前仍采用轮询触摸，尚未接入 FT5446U INT/EXTI；日志互斥、任务栈水位和队列高水位也还没有加入监控。
+
+**Day 05 / 下一步（W2：RTOS 同步与状态响应）**
+
+1. 为 USART1 日志增加 Mutex，理解互斥锁解决的资源竞争问题；
+2. 学习二值信号量、计数信号量和队列的区别；
+3. 将触摸事件接入一个简单的显示状态响应；
+4. 复查任务栈使用量、空闲任务占用率和队列高水位；
+5. 完成同步机制验证后，再进入 Modbus RTU 任务设计。
 
 **详细日志**：
 - [logs/01_display_bringup_log.md](logs/01_display_bringup_log.md) — Day 01 显示链路
 - [logs/02_display_touch_bringup_log.md](logs/02_display_touch_bringup_log.md) — Day 02 显示工程化、触摸接线与触摸验证
+- [logs/03_freertos_task_bringup_log.md](logs/03_freertos_task_bringup_log.md) — Day 03 FreeRTOS、LED_Task 与 TouchTask
+- [logs/04_freertos_queue_business_log.md](logs/04_freertos_queue_business_log.md) — Day 04 队列通信与触摸 LED 业务
 
 ---
 
@@ -293,11 +342,14 @@ Docs/
 ├── 00_project_plan_and_meta.md      # 元文档：总体规划 + 进度 + 约定（每天更新，放根目录）
 ├── logs/                            # 开发日志（按阶段）
 │   ├── 01_display_bringup_log.md
-│   └── 02_display_touch_bringup_log.md
+│   ├── 02_display_touch_bringup_log.md
+│   ├── 03_freertos_task_bringup_log.md
+│   └── 04_freertos_queue_business_log.md
 ├── references/                      # 参考资料（原理图、手册、datasheet）
 │   └── STM32H747XIH6 CB V1.1_SCH.pdf
 └── guides/                          # 排错/工具指南
     ├── STM32_IntelliSense_Troubleshooting.md
+    ├── FreeRTOS_CubeMX_Configuration_Reference.md
     └── commands_cheatsheet.txt
 ```
 

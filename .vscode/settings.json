@@ -16,7 +16,8 @@
     "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
     "${workspaceFolder}/Drivers/CMSIS/Include",
     "${workspaceFolder}/BSP/SDRAM",
-    "${workspaceFolder}/BSP/MPU"
+    "${workspaceFolder}/BSP/MPU",
+    "${workspaceFolder}/BSP/LCD"
   ],
   "C_Cpp.default.browse.path": [
     "${workspaceFolder}/CM7/Core/Inc",
@@ -25,7 +26,8 @@
     "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
     "${workspaceFolder}/Drivers/CMSIS/Include",
     "${workspaceFolder}/BSP/SDRAM",
-    "${workspaceFolder}/BSP/MPU"
+    "${workspaceFolder}/BSP/MPU",
+    "${workspaceFolder}/BSP/LCD"
   ],
   "C_Cpp.default.defines": [
     "CORE_CM7",
@@ -45,7 +47,8 @@
       "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
       "${workspaceFolder}/Drivers/CMSIS/Include",
       "${workspaceFolder}/BSP/SDRAM",
-      "${workspaceFolder}/BSP/MPU"
+      "${workspaceFolder}/BSP/MPU",
+      "${workspaceFolder}/BSP/LCD"
     ]
   }
 }
