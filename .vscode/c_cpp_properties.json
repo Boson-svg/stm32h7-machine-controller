@@ -22,6 +22,7 @@
         "${workspaceFolder}/BSP/MPU",
         "${workspaceFolder}/BSP/LCD",
         "${workspaceFolder}/BSP/TOUCH",
+        "${workspaceFolder}/BSP/DHT11",
         "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
         "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
         "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",

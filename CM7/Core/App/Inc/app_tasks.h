@@ -4,15 +4,19 @@
 #include "main.h"
 #include "stdio.h"
 #include "stdint.h"
+#include "stdarg.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 #include "ft5206.h"
 #include "touch.h"
-
+#include "dht11.h"
 
 void AppTasks_Init(void);
+void Queue_Init(void);
+void Mutex_Init(void);
 
 typedef enum{
     TOUCH_EVENT_DOWN,

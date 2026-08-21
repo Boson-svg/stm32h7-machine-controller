@@ -1,7 +1,7 @@
 # 项目总体规划与协作约定（每天更新）
 
 > 本文档是新 AI 对话窗口的「启动上下文」——接手本项目前先读这里。
-> 最后更新：2026-08-21
+> 最后更新：2026-08-22
 
 ---
 
@@ -35,7 +35,7 @@
 | **LVGL** | `BSP/LVGL/` | GUI 库移植层（disp/indev 接口）|
 | **TOUCH** | `BSP/TOUCH/` | 电容触摸（软件 I2C + FT5206/GT9xxx）|
 | **Log** | `BSP/Log/` | 分级日志系统 |
-| **Modbus** | `BSP/Modbus/` | Modbus RTU 从站 + USB-CDC 双通道 |
+| **Modbus** | `BSP/Modbus/` | Modbus RTU 从站；原项目通过传输抽象层接入 USB CDC，复刻项目计划接入 RS485 |
 | **W5500** | `BSP/W5500/` | 以太网（含 driver 子目录）|
 | **ESP8266** | `BSP/ESP8266/` | WiFi（AT 指令，已决定砍掉）|
 | **OTA** | `BSP/OTA/` | OTA 升级（协议/传输/flash/manager，19 个文件）|
@@ -62,7 +62,7 @@ CM4 侧只有：`dma.c / main.c`（轻量实时任务）。
 | 周 | 目标 | 关键产出物 | 验收标准 |
 |---|---|---|---|
 | **W1** | 双核 + 显示基础链路 | 双核启动、FMC/SDRAM、LTDC、DMA2D、触摸 | 双核各自点灯、屏幕显示纯色、串口输出触摸坐标 |
-| **W2** | RTOS + 存储 + Modbus | FreeRTOS 多任务、日志、SDMMC+FATFS、Modbus RTU 从站 | Modbus Poll 读写线圈 |
+| **W2** | RTOS + Modbus 基础 + 存储准备 | FreeRTOS 多任务、日志、任务监控、Modbus 协议层、SDMMC+FATFS 基础 | 无 RS485 硬件时完成协议自测；硬件到货后完成 Modbus Poll 读写线圈 |
 | **W3** | 以太网 + OTA（最难） | W5500 TCP、双槽分区、bootloader、SOIP、CRC32、回滚 | 上位机一键升级、断电可回滚 |
 | **W4** | 稳定 + 增量 + 包装 | IWDG、复位原因、增量功能、架构图+文档 | 长跑不重启、能脱稿讲透 |
 
@@ -72,7 +72,7 @@ CM4 侧只有：`dma.c / main.c`（轻量实时任务）。
 |---|---|---|
 | 🔴 必做 | 双核启动、OTA 双槽、Modbus、W5500 | 核心故事，面试 80% 问题来自这里 |
 | 🟡 够用就行 | 显示、FreeRTOS 基础、SDRAM/MPU | OTA/双核的前置依赖 |
-| ⚪ 直接砍 | 自定义 LVGL 复杂界面、DHT11、ADC、USB-CDC 双通道 Modbus、ESP8266 | 高耗时低回报 |
+| ⚪ 直接砍 | 自定义 LVGL 复杂界面、ESP8266 | 高耗时低回报；DHT11 基础采集已完成，ADC按剩余时间推进 |
 
 ### 3.3 主链路优先级（时间不够时的砍单顺序）
 
@@ -109,7 +109,9 @@ E:\STM32H7\stm32h7-machine-controller\
 │   ├── LVGL\lv_port_*.c/h          # LVGL 移植层
 │   ├── TOUCH\*.c/h                 # 触摸（ctiic/ft5206/gt9xxx/touch）
 │   ├── Log\bsp_log.c/h             # 日志
-│   ├── Modbus\bsp_modbus_*.c/h     # Modbus
+│   ├── Modbus\bsp_modbus_*.c/h     # Modbus 应用、寄存器映射与持久化
+│   ├── Modbus\uart_device*.c/h     # 原项目传输抽象；当前实现为 USB CDC
+│   ├── Modbus\bsp_usb_modbus.c/h   # 原项目 USB CDC Modbus 传输
 │   ├── W5500\bsp_w5500_*.c/h       # 以太网
 │   ├── OTA\bsp_ota_*.c/h           # OTA（19 个文件）
 │   └── ...
@@ -148,7 +150,7 @@ E:\STM32H7\stm32h7-machine-controller\
 |---|---|---|
 | 🔴 必做 | 双核启动、OTA 双槽、Modbus、W5500 | 核心故事，面试 80% 问题来自这里 |
 | 🟡 够用就行 | 显示、FreeRTOS 基础、SDRAM/MPU | OTA/双核的前置依赖 |
-| ⚪ 直接砍 | 自定义 LVGL 复杂界面、DHT11、ADC、USB-CDC 双通道 Modbus、ESP8266 | 高耗时低回报 |
+| ⚪ 直接砍 | 自定义 LVGL 复杂界面、USB-CDC 双通道 Modbus、ESP8266 | 高耗时低回报；DHT11基础驱动已完成 |
 
 ### 关键决策（已定，勿再讨论）
 
@@ -181,6 +183,11 @@ E:\STM32H7\stm32h7-machine-controller\
 | TouchMonitor_Task 业务任务 | ✅ | 08-21 |
 | 触摸事件驱动 LED 业务 | ✅ | 08-21 |
 | CM4/CM7 重新编译链接验证 | ✅ | 08-21 |
+| 日志 Mutex 与初始化封装 | ✅ | 08-21 |
+| SystemMonitor_Task 任务/队列监控 | ✅ | 08-21 |
+| FreeRTOS 任务返回错误定位与修复 | ✅ | 08-21 |
+| DWT 微秒延时与 DHT11 单总线驱动 | ✅ | 08-22 |
+| DHT11 FreeRTOS 采样任务与串口验证 | ✅ | 08-22 |
 
 **W1「双核 + 显示 + 触摸」全部完成 ✅**
 
@@ -254,19 +261,70 @@ Day 04 完成了从触摸采集任务到 LED 业务任务的队列通信闭环�
 
 当前仍采用轮询触摸，尚未接入 FT5446U INT/EXTI；日志互斥、任务栈水位和队列高水位也还没有加入监控。
 
-**Day 05 / 下一步（W2：RTOS 同步与状态响应）**
+### 5.8 Day 05 阶段进展与原项目 Modbus 对照
 
-1. 为 USART1 日志增加 Mutex，理解互斥锁解决的资源竞争问题；
-2. 学习二值信号量、计数信号量和队列的区别；
-3. 将触摸事件接入一个简单的显示状态响应；
-4. 复查任务栈使用量、空闲任务占用率和队列高水位；
-5. 完成同步机制验证后，再进入 Modbus RTU 任务设计。
+Day 05 已完成日志互斥封装、队列/互斥锁初始化封装和 `SystemMonitor_Task`。监控任务能够持续输出任务栈水位和触摸事件队列状态；此前出现的 `prvTaskExitError` 已确认是监控任务执行一次后直接返回造成的，加入任务循环和延时后已验证恢复正常。
+
+对原项目的 Modbus 代码复查得到以下结论：
+
+1. 原项目的 Modbus 主循环位于 `E:\STM32H7\stm32h7-machine-controller\BSP\Modbus\bsp_modbus_app.c`；
+2. 原项目通过 `uart_device.h/.c` 定义传输设备抽象，并在 `uart_device_usb.c` 中注册 USB CDC 设备；
+3. `ModbusServerTask()` 使用 `modbus_new_st_rtu("usb", 115200, 'N', 8, 1)`，因此原项目当前示例是“Modbus RTU 帧格式 + USB CDC 物理传输”，不是已经完成的 RS485 驱动；
+4. 原项目的 `GPIO.ioc` 和 `CM7/Core/Src/usart.c` 中虽然配置了 USART3（PC10/PC11）和 USART6（PG9/PG14）的 DMA 收发，但源码中没有看到可直接复用的 RS485 DE/RE 方向控制闭环；实际使用哪个 UART、是否需要 DE/RE，必须等 RS485 模块和板卡接线确认后再决定；
+5. 因此本复刻项目采用“协议层与物理层解耦”的路线：先复刻寄存器映射、CRC、功能码和传输接口，再把真实 RS485 接入该接口。
+
+### 5.9 Day 05 验收证据与阶段结论
+
+| 验收项 | 当前事实 | 证据 |
+|---|---|---|
+| DHT11 接线 | DATA 使用 PD12，由 CM7 管理；GPIO 配置为开漏输出、上拉、初始释放 | `Template.ioc`、`CM7/Core/Src/gpio.c`、`BSP/DHT11/dht11_conf.h` |
+| DWT 微秒延时 | `dwt_init()` 开启 CYCCNT；`dwt_delay_us()` 使用 64 位周期计算并分段等待，避免长延时溢出 | `BSP/TOUCH/bsp_delay.c` |
+| DHT11 起始时序 | 任务中拉低数据线 20 ms，之后释放总线并使用 DWT 完成微秒级响应时序 | `BSP/DHT11/dht11.c` |
+| 40 位数据读取 | 依次读取湿度整数、湿度小数、温度整数、温度小数和校验和 | `BSP/DHT11/dht11.c` |
+| 错误处理 | 空指针、响应超时、数据位超时、校验和错误均返回失败，并在退出路径释放总线 | `BSP/DHT11/dht11.c` |
+| FreeRTOS 任务 | `DHT11Task` 使用 512 字栈、优先级 2，每 2 s 采样一次 | `CM7/Core/App/Src/app_tasks.c` |
+| 运行验证 | 串口连续输出 `humidity=44.0%`、`42.0%`、`41.0%` 以及对应温度，监控任务持续运行 | 开发板串口日志 |
+| 任务资源状态 | LED、Touch、TouchMonitor 栈水位稳定；队列 `queue_used=0`、`queue_free=16` | 开发板串口日志 |
+| 工程接入 | CM7 Makefile 已加入 DHT11 源文件和头文件路径 | `Makefile/CM7/Makefile` |
+
+Day 05 完成了从 GPIO 配置、DWT 微秒延时、DHT11 单总线协议解析到 FreeRTOS 周期采样任务的完整闭环。DHT11 驱动运行在 CM7，任务负责初始化、2 s 周期采样和日志输出；触摸任务、队列和系统监控任务仍能稳定运行。后续应把DHT11数据从日志进一步抽象到共享数据层，使Modbus和LVGL不直接依赖传感器驱动。
+
+当前实现中，DHT11读取阶段暂时关闭中断以保证微秒级采样，适合当前验证版本；后续若需要更强实时性，可改为定时器输入捕获或边沿中断测量。
+
+### 5.10 RS485 延迟后的调整路线
+
+RS485 模块预计 Day 07 到货。等待期间不暂停开发，调整后的安排如下：
+
+| 日期 | 主题 | 主要任务 | 当日验收 |
+|---|---|---|---|
+| **Day 05** | DHT11 驱动与采样任务 | 确认实际引脚；手写单总线时序、校验、错误处理和 2 s 采样任务 | 已完成：串口稳定输出温湿度 |
+| **Day 06** | ADC 驱动与共享数据基础 | 配置 ADC1；完成校准、平均/EMA 滤波、500 ms 采样任务；建立 Mutex 保护的 `bsp_app_data` 接口 | 能稳定输出 ADC 毫伏值，温湿度/电压都有统一 Get/Set API |
+| **Day 07** | RS485 物理层确认 | 模块到货后确认型号、电源电平、A/B、GND、TTL TX/RX、DE/RE 或自动收发；选择实际 UART；完成 CubeMX 外设与 DMA/中断配置 | 能明确接线表、UART 参数和收发方向控制方案；先完成单字节收发验证 |
+| **Day 08** | Modbus 协议层与传输抽象 | 手写 CRC16、RTU 帧结构、寄存器映射和 `Send/RecvByte/Flush` 接口；将传感器数据映射到保持寄存器 | 给定测试帧能完成 CRC 校验、地址/功能码解析和响应帧构造 |
+| **Day 09** | ModbusTask 接入 | 将 RS485 端口接到传输抽象层；实现接收缓冲、帧边界、发送前后 DE/RE 控制和超时 | 串口能接收完整 RTU 请求并发出响应 |
+| **Day 10** | 功能码与异常处理 | 实现 FC03、FC06、FC10；再根据进度补充 FC01、FC05、FC0F；处理 CRC 错误、地址不匹配、越界和超时 | Modbus Poll 能读写传感器寄存器和 LED，错误帧不会阻塞任务 |
+| **Day 11-13** | W5500 基础 | 阅读原项目 `BSP/W5500/driver` 和 `bsp_w5500_net/tcp/app`；完成 SPI、复位、寄存器读写和链路状态 | 能读取 W5500 芯片版本/网络状态 |
+| **Day 14-16** | TCP/Modbus 网关或网络服务 | 根据时间选择 W5500 TCP 透传、Modbus TCP 或设备状态 TCP 服务；保留 RS485 Modbus 主链路 | 上位机能通过网络访问设备功能 |
+| **Day 17-23** | OTA 最小闭环 | 阅读原项目 `BSP/OTA` 与 `Common`；完成镜像校验、版本信息、升级状态记录，再实现双槽切换 | 至少完成可靠性分析和最小升级演示；完整回滚视剩余时间决定 |
+| **Day 24-27** | 稳定性与故障注入 | 看门狗、复位原因、任务栈、堆、队列、通信错误和掉电/异常场景验证 | 长时间运行，故障可记录、可恢复或安全停机 |
+| **Day 28-30** | 项目包装 | 整理架构图、通信时序图、寄存器表、接线图、测试记录、面试问答和 Git 提交 | 能现场演示并解释双核、RTOS、显示、触摸、Modbus 和 OTA 取舍 |
+
+Day 06 的重点是完成 ADC 驱动和共享数据接口，使后续 Modbus/LVGL 直接消费统一数据。RS485 到货后，仍然要把协议层与物理层接口分开；这样只需要替换或补充 `ModbusPort` 的 UART/RS485 实现，不需要重写 CRC、帧解析、寄存器映射和传感器采集逻辑。
+
+**Day 06 / 下一步（ADC驱动与共享数据基础）**
+
+1. 配置 ADC1 的输入通道、采样时间、触发方式和校准流程；
+2. 手写 ADC采样任务，采用500 ms周期并输出原始值与换算后的毫伏值；
+3. 根据噪声情况加入多次平均或EMA滤波，并记录滤波前后结果；
+4. 建立 Mutex 保护的共享数据结构，提供温湿度和电压的统一 Get/Set 接口；
+5. 确认后续Modbus保持寄存器和LVGL仪表盘直接消费共享数据，不直接访问DHT11/ADC底层驱动。
 
 **详细日志**：
 - [logs/01_display_bringup_log.md](logs/01_display_bringup_log.md) — Day 01 显示链路
 - [logs/02_display_touch_bringup_log.md](logs/02_display_touch_bringup_log.md) — Day 02 显示工程化、触摸接线与触摸验证
 - [logs/03_freertos_task_bringup_log.md](logs/03_freertos_task_bringup_log.md) — Day 03 FreeRTOS、LED_Task 与 TouchTask
 - [logs/04_freertos_queue_business_log.md](logs/04_freertos_queue_business_log.md) — Day 04 队列通信与触摸 LED 业务
+- [logs/05_dht11_bringup_log.md](logs/05_dht11_bringup_log.md) — Day 05 DHT11驱动、DWT延时与采样任务
 
 ---
 
